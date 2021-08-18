@@ -57,9 +57,11 @@ MongoClient.connect(process.env.DB_URL, {
 			if (!req.body?.username || !req.body?.password) {
 				errorHandler(res, 400, 'username and password are required!');
 			}
-			const user = await usersCollection.findOne(req.body);
+			// const user = await usersCollection.findOne( req.body , apiKey );
+			const user = await usersCollection.findOne(req.body, { projection: {_id:0, apiKey: 1 } });
 			if (user) {
-				res.send(user);
+				console.log(user);
+				res.send(user); 
 			} else {
 				errorHandler(res, 400, 'username or password is incorrect!');
 			}
@@ -71,7 +73,13 @@ MongoClient.connect(process.env.DB_URL, {
 
 	app.post('/transaction', async (req, res) => {
 		try {
+
+			if(Object.keys(req.body).length === 0){
+				errorHandler(res,400,'data is required')
+			}
+
 			const data = encrypt(JSON.stringify(req.body));
+			
 			const result = await transactionCollection.insertOne({ data, userId: req.user._id });
 			res.send(result);
 		} catch (err) {
@@ -98,6 +106,9 @@ MongoClient.connect(process.env.DB_URL, {
 	app.put('/transaction', async (req, res) => {
 		try {
 			const transaction = req.body;
+			if(!transaction._id){
+				errorHandler(res,400,'data is required')
+			}
 			const transactionId = ObjectId(transaction._id);
 			delete transaction._id;
 			const data = encrypt(JSON.stringify(transaction));
@@ -112,6 +123,9 @@ MongoClient.connect(process.env.DB_URL, {
 	app.delete('/transaction', async (req, res) => {
 		try {
 			const transaction = req.body;
+			if(!transaction._id){
+				errorHandler(res,400,'_id is required')
+			}
 			const transactionId = ObjectId(transaction._id);
 			const result = await transactionCollection.deleteOne({ _id: transactionId });
 			res.send(result);
