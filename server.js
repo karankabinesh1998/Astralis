@@ -23,6 +23,7 @@ MongoClient.connect(process.env.DB_URL, {
   console.log('Connected to Database', process.env.DB_URL);
 	const db = client.db(process.env.DB_NAME);
 	const usersCollection = db.collection('users');
+	usersCollection.createIndex( { email: 1 } , { unique: true } );
 	const transactionCollection = db.collection('transactions');
 
 	//Middleware
@@ -34,9 +35,21 @@ MongoClient.connect(process.env.DB_URL, {
 	});
 	
 	app.post('/signup', async (req, res) => {
+		
+		try {
+
 		const apiKey = generateAPIKey();
 		const result = await usersCollection.insertOne({ ...req.body, apiKey });
 		res.send(result);
+			
+		} catch (error) {
+			// console.log(error);
+			if(error?.keyPattern?.email){
+				errorHandler(res,409, 'Email already Exists');
+			}else{
+				errorHandler(res,500, 'General server error');
+			}
+		}
 	});
 	
 	app.post('/login', async (req, res) => {
